@@ -81,18 +81,18 @@ class DhcpAgentNotifyAPI(proxy.RpcProxy):
                      % {'active': len_active_agents,
                         'total': len_enabled_agents,
                         'net_id': network_id})
-        if not enabled_agents:
-            num_ports = self.plugin.get_ports_count(
-                context, {'network_id': [network_id]})
-            notification_required = (
-                num_ports > 0 and len(network['subnets']) >= 1)
-            if notification_required:
-                LOG.error(_("Will not send event %(method)s for network "
-                            "%(net_id)s: no agent available. Payload: "
-                            "%(payload)s")
-                          % {'method': method,
-                             'net_id': network_id,
-                             'payload': payload})
+        # if not enabled_agents:
+        #     num_ports = self.plugin.get_ports_count(
+        #         context, {'network_id': [network_id]})
+        #     notification_required = (
+        #         num_ports > 0 and len(network['subnets']) >= 1)
+        #     if notification_required:
+        #         LOG.error(_("Will not send event %(method)s for network "
+        #                     "%(net_id)s: no agent available. Payload: "
+        #                     "%(payload)s")
+        #                   % {'method': method,
+        #                      'net_id': network_id,
+        #                      'payload': payload})
         return enabled_agents
 
     def _notify_agents(self, context, method, payload, network_id):
