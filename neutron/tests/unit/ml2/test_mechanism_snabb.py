@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 # @author: Nikolay Nikolaev
+# @author: Luke Gorrie
+
+import netaddr
 
 from neutron.plugins.common import constants
 from neutron.plugins.ml2 import config as config
@@ -44,14 +47,61 @@ class SnabbTestCase(test_plugin.NeutronDbPluginV2TestCase):
         self.segment[api.NETWORK_TYPE] = constants.TYPE_FLAT
         self.assertFalse(self.mech.check_segment(self.segment))
         self.segment[api.NETWORK_TYPE] = constants.TYPE_VLAN
-        self.assertTrue(self.mech.check_segment(self.segment))
+        self.assertFalse(self.mech.check_segment(self.segment))
         self.segment[api.NETWORK_TYPE] = constants.TYPE_GRE
         self.assertFalse(self.mech.check_segment(self.segment))
         self.segment[api.NETWORK_TYPE] = constants.TYPE_VXLAN
         self.assertFalse(self.mech.check_segment(self.segment))
+        self.segment[api.NETWORK_TYPE] = 'piesss'
+        self.assertTrue(self.mech.check_segment(self.segment))
         # Validate a network type not currently supported
         self.segment[api.NETWORK_TYPE] = 'mpls'
         self.assertFalse(self.mech.check_segment(self.segment))
+
+
+class SnabbMechanismTestPiesss(SnabbTestCase):
+
+    def test_choose_available_port(self):
+        hosts_and_ports = {'host1':
+                           {'port0':
+                            {'name': 'port0',
+                             'allocated': 10, 'gbps': 10, 'vlan0': 100,
+                             'address0': netaddr.IPAddress('2003:1::0')},
+                            'port1':
+                            {'name': 'port1',
+                             'allocated': 5, 'gbps': 10, 'vlan0': 100,
+                             'address0': netaddr.IPAddress('2003:2::0')},
+                            'port2':
+                            {'name': 'port2',
+                             'allocated': 0, 'gbps': 10, 'vlan0': 200,
+                             'address0': netaddr.IPAddress('2003:3::0')}}}
+        port = self.mech._choose_port(hosts_and_ports, 'host1', 4)
+        self.assertEqual(port['name'], 'port1')
+        port = self.mech._choose_port(hosts_and_ports, 'host1', 5)
+        self.assertEqual(port['name'], 'port1')
+        port = self.mech._choose_port(hosts_and_ports, 'host1', 6)
+        self.assertEqual(port['name'], 'port2')
+
+    def test_choose_overloaded_port(self):
+        hosts_and_ports = {'host1':
+                           {'port0':
+                            {'name': 'port0',
+                             'allocated': 15, 'gbps': 10, 'vlan0': 100,
+                             'address0': netaddr.IPAddress('2003:1::0')},
+                            'port1':
+                            {'name': 'port1',
+                             'allocated': 11, 'gbps': 10, 'vlan0': 100,
+                             'address0': netaddr.IPAddress('2003:2::0')},
+                            'port2':
+                            {'name': 'port2',
+                             'allocated': 20, 'gbps': 10, 'vlan0': 200,
+                             'address0': netaddr.IPAddress('2003:3::0')}}}
+        port = self.mech._choose_port(hosts_and_ports, 'host1', 1)
+        self.assertEqual(port['name'], 'port1')
+        port = self.mech._choose_port(hosts_and_ports, 'host1', 5)
+        self.assertEqual(port['name'], 'port1')
+        port = self.mech._choose_port(hosts_and_ports, 'host1', 20)
+        self.assertEqual(port['name'], 'port1')
 
 
 class SnabbMechanismTestBasicGet(test_plugin.TestBasicGet, SnabbTestCase):
